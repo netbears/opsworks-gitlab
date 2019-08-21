@@ -469,27 +469,26 @@ Resources:
       LayerId: 
         Ref: Layer
 
-  # InstanceOpsWorks: 
-  #   DependsOn: AWSDirectory
-  #   Type: AWS::OpsWorks::Instance
-  #   DependsOn: Elb
-  #   Properties: 
-  #     StackId: 
-  #       Ref: OpsWorksStack
-  #     LayerIds: 
-  #       - Ref: Layer
-  #     InstanceType:
-  #       Ref: InstanceType
-  #     RootDeviceType: ebs
-  #     SubnetId:
-  #       Fn::Select: [ 0, Ref: SubnetIdsPrivate ]
-  #     Hostname: openvpn-1
-  #     BlockDeviceMappings:
-  #       - DeviceName: ROOT_DEVICE
-  #         Ebs:
-  #           VolumeType: gp2
-  #           VolumeSize:
-  #             Ref: InstanceRootVolumeSize
+  InstanceOpsWorks: 
+    Type: AWS::OpsWorks::Instance
+    DependsOn: Elb
+    Properties: 
+      StackId: 
+        Ref: OpsWorksStack
+      LayerIds: 
+        - Ref: Layer
+      InstanceType:
+        Ref: InstanceType
+      RootDeviceType: ebs
+      SubnetId:
+        Ref: SubnetIdHost
+      Hostname: gitlab-1
+      BlockDeviceMappings:
+        - DeviceName: ROOT_DEVICE
+          Ebs:
+            VolumeType: gp2
+            VolumeSize:
+              Ref: InstanceRootVolumeSize
 
   Route53Record:
     Type: AWS::Route53::RecordSetGroup
