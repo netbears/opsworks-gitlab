@@ -1,0 +1,90 @@
+[
+  {
+    "ParameterKey": "CookbookUrl",
+    "ParameterValue": "${CookbookUrl}"
+  },
+  {
+    "ParameterKey": "Version",
+    "ParameterValue": "${Version}"
+  },
+  {
+    "ParameterKey": "InstanceType",
+    "ParameterValue": "${InstanceType}"
+  },
+  {
+    "ParameterKey": "InstanceRootVolumeSize",
+    "ParameterValue": "${InstanceRootVolumeSize}"
+  },
+  {
+    "ParameterKey": "LoadBalancerType",
+    "ParameterValue": "${LoadBalancerType}"
+  },
+  {
+    "ParameterKey": "SubnetIdLoadBalancer",
+    "ParameterValue": "${SubnetIdLoadBalancer}"
+  },
+  {
+    "ParameterKey": "SubnetIdHost",
+    "ParameterValue": "${SubnetIdHost}"
+  },
+  {
+    "ParameterKey": "SslLoadBalancer",
+    "ParameterValue": "${SslLoadBalancer}"
+  },
+  {
+    "ParameterKey": "DnsRecord",
+    "ParameterValue": "${DnsRecord}"
+  },
+  {
+    "ParameterKey": "DnsZone",
+    "ParameterValue": "${DnsZone}"
+  },
+  {
+    "ParameterKey": "LdapBindDn",
+    "ParameterValue": "${LdapBindDn}"
+  },
+  {
+    "ParameterKey": "LdapBindPassword",
+    "ParameterValue": "${LdapBindPassword}"
+  },
+  {
+    "ParameterKey": "LdapUsersBaseDn",
+    "ParameterValue": "${LdapUsersBaseDn}"
+  },
+  {
+    "ParameterKey": "LdapGroupRequirement",
+    "ParameterValue": "${LdapGroupRequirement}"
+  },
+  {
+    "ParameterKey": "LdapGroupBase",
+    "ParameterValue": "${LdapGroupBase}"
+  },
+  {
+    "ParameterKey": "LdapAdminGroup",
+    "ParameterValue": "${LdapAdminGroup}"
+  },
+  {
+    "ParameterKey": "ElasticsearchPort",
+    "ParameterValue": "${ElasticsearchPort}"
+  },
+  {
+    "ParameterKey": "ElasticsearchHost",
+    "ParameterValue": "${ElasticsearchHost}"
+  },
+  {
+    "ParameterKey": "KibanaPort",
+    "ParameterValue": "${KibanaPort}"
+  },
+  {
+    "ParameterKey": "KibanaHost",
+    "ParameterValue": "${KibanaHost}"
+  },
+  {
+    "ParameterKey": "LoggingToElasticsearchEnabled",
+    "ParameterValue": "${OpenVPNFilebeatEnabled}"
+  },
+  {
+    "ParameterKey": "MonitoringToElasticsearchEnabled",
+    "ParameterValue": "${OpenVPNMetricbeatEnabled}"
+  }
+]

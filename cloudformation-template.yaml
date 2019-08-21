@@ -1,0 +1,548 @@
+Description: Launch GitLab backed up by ActiveDirectory SimpleAD stack within its own VPC or an existing VPC
+
+Parameters:
+
+  #GitLab
+  CookbookUrl:
+    Type: String
+    Default: https://github.com/netbears/opsworks-gitlab/releases/download/v1.0.0/cookbooks-v1.0.0.tar.gz
+
+  Version:
+    Type: String
+    Default: '12.1.6'
+
+  InstanceType:
+    Type: String
+    Default: 'c5.xlarge'
+    AllowedValues:
+    - c5.large
+    - c5.xlarge
+    - c5.2xlarge
+    - c5.4xlarge
+
+  InstanceRootVolumeSize:
+    Type: String
+    Default: '100'
+    Description: Size in GB of the root volume
+
+  LoadBalancerType:
+    Type: String
+    Default: internal
+    AllowedValues:
+      - internal
+      - internet-facing
+
+  SubnetIdLoadBalancer:
+    Type: String
+    Default: List<AWS::EC2::Subnet::Id>
+
+  SubnetIdHost:
+    Type: String
+    Default: AWS::EC2::Subnet::Id
+
+  SslLoadBalancer:
+    Type: String
+    Description: SSL ARN from Certificate Manager
+
+  DnsRecord:
+    Type: String
+
+  DnsZone:
+    Type: AWS::Route53::HostedZone::Id
+    Description: Route53 hosted zone in which to place dns record
+
+  #LDAP
+  LdapBindDn:
+    Type: String
+    Description: User will have to be created in AD after stack creation
+
+  LdapBindPassword:
+    Type: String
+    NoEcho: 'true'
+    Description: Password for bind user needs to be set up to this one after stack creation
+
+  LdapUsersBaseDn:
+    Type: String
+    Description: Make sure the path exists in AD after stack creation
+
+  LdapGroupRequirement:
+    Type: String
+    Description: Make sure the group exists in AD after stack creation
+
+  LdapGroupBase:
+    Type: String
+    Description: The OU in which to look for the group requirement definition
+
+  LdapAdminGroup:
+    Type: String
+    Description: The group which will have admin rights
+
+  # Logging
+  ElasticsearchPort:
+    Type: String
+    Default: '9200'
+
+  ElasticsearchHost:
+    Type: String
+
+  KibanaPort:
+    Type: String
+    Default: '5601'
+
+  KibanaHost:
+    Type: String
+
+  LoggingToElasticsearchEnabled:
+    Type: String
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: Whether to deploy Filebeat and connect it to ElasticSearch
+
+  MonitoringToElasticsearchEnabled:
+    Type: String
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: Whether to deploy Metricbeat and connect it to ElasticSearch
+
+Resources:
+  KmsEncryptRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal: {Service: [lambda.amazonaws.com]}
+          Action: ['sts:AssumeRole']
+      Policies:
+      - PolicyName:
+          Fn::Sub: ${AWS::StackName}-KMS
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action:
+            - kms:Encrypt*
+            - kms:Get*
+            - kms:List*
+            - kms:Describe*
+            Resource: '*'
+      - PolicyName:
+          Fn::Sub: ${AWS::StackName}-CloudWatch
+        PolicyDocument:
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:*
+            - cloudwatch:*
+            Resource: '*'
+
+  KmsEncryptFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.lambda_handler
+      Runtime: python3.7
+      Role:
+        Fn::GetAtt: KmsEncryptRole.Arn
+      Code:
+        ZipFile:
+          Fn::Sub: |
+            import boto3
+            import cfnresponse
+            import base64
+            def lambda_handler(event, context):
+              responseValue={}
+              kms = boto3.client('kms',region_name="${AWS::Region}")
+              secret = kms.encrypt(KeyId="${LdapPasswordKey.Arn}",Plaintext="${LdapBindPassword}")
+              blob = secret["CiphertextBlob"]
+              responseValue["Value"] = str(base64.b64encode(blob))[2:-1]
+              cfnresponse.send(event, context, cfnresponse.SUCCESS, responseValue)
+              return True
+
+  KmsEncryptResult:
+    Type: Custom::KmsEncryptLdapBindPassword
+    Properties:
+      ServiceToken:
+        Fn::GetAtt: KmsEncryptFunction.Arn
+
+  LdapPasswordKey:
+    Type: AWS::KMS::Key
+    Properties:
+      KeyPolicy:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: kms:*
+            Resource: "*"
+            Principal:
+              AWS:
+                - Fn::Sub: arn:aws:iam::${AWS::AccountId}:root
+          - Effect: Allow
+            Action: kms:Encrypt
+            Resource: "*"
+            Principal:
+              AWS:
+                - Fn::GetAtt: KmsEncryptRole.Arn
+          - Effect: Allow
+            Action: kms:Decrypt
+            Resource: "*"
+            Principal:
+              AWS:
+                - Fn::GetAtt: InstanceRoleGitLab.Arn
+
+  LdapPasswordAlias:
+    Type: AWS::KMS::Alias
+    Properties:
+      AliasName: alias/OpenVPN
+      TargetKeyId:
+        Ref: LdapPasswordKey
+
+  ServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - 'opsworks.amazonaws.com'
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName:
+            Fn::Sub: ${AWS::StackName}-OpsWorksDefaultPolicy
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'ec2:*'
+                  - 'iam:PassRole'
+                  - 'cloudwatch:GetMetricStatistics'
+                  - 'cloudwatch:DescribeAlarms'
+                  - 'elasticloadbalancing:*'
+                  - 'ecs:*'
+                  - 'rds:*'
+                Resource: '*'
+
+  InstanceRoleGitLab:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: 
+                - 'ec2.amazonaws.com'
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName:
+            Fn::Sub: ${AWS::StackName}-ec2
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'ec2:Get*'
+                  - 'ec2:List*'
+                  - 'ec2:Describe*'
+                Resource:
+                  - '*'
+        - PolicyName:
+            Fn::Sub: ${AWS::StackName}-s3
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 's3:*'
+                Resource:
+                  - '*'
+        - PolicyName:
+            Fn::Sub: ${AWS::StackName}-CloudWatchLogs
+          PolicyDocument:
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'cloudwatch:*'
+                  - 'logs:*'
+                Resource:
+                  - '*'
+
+  InstanceProfileGitLab:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+        - Ref: InstanceRoleGitLab
+
+  Ec2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription:
+        Fn::Sub: ${AWS::StackName}-Sg
+      VpcId:
+        Ref: VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: udp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
+
+  AlbSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription:
+        Fn::Sub: ${AWS::StackName}-Sg
+      VpcId:
+        Ref: VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: udp
+          FromPort: 0
+          ToPort: 65535
+          CidrIp: 0.0.0.0/0
+
+  OpsWorksStack: 
+    Type: AWS::OpsWorks::Stack
+    Properties: 
+      AgentVersion: LATEST
+      Name: 
+        Ref: AWS::StackName
+      ServiceRoleArn: 
+        Fn::GetAtt:
+          - ServiceRole
+          - Arn
+      DefaultInstanceProfileArn: 
+        Fn::GetAtt:
+          - InstanceProfileGitLab
+          - Arn
+      ConfigurationManager:
+        Name: Chef
+        Version: '12'
+      UseCustomCookbooks: true
+      CustomCookbooksSource:
+        Type: archive
+        Url:
+          Ref: CookbookUrl
+      DefaultSubnetId:
+        Ref: SubnetIdHost
+      VpcId:
+        Ref: VpcId
+      UseOpsworksSecurityGroups: true
+      DefaultOs: Ubuntu 18.04 LTS
+      DefaultRootDeviceType: ebs
+      CustomJson:
+        Fn::Sub: |
+          {
+            "gitlab": {
+              "version": "${Version}",
+              "external_url": "${ExternalUrl}",
+              "domain": "${DnsRecord}",
+              "ldap_servers": {
+                "bind_dn": "${LdapBindDn}",
+                "password_encrypted": "${KmsEncryptResult.Value}",
+                "base": "${LdapUsersBaseDn}",
+                "user_filter": "${LdapGroupRequirement}",
+                "group_base": "${LdapGroupBase}",
+                "admin_group": "${LdapAdminGroup}"
+              }
+            },
+            "elasticsearch": {
+              "http_port": "${ElasticsearchPort}",
+              "http_ip": "${ElasticsearchHost}"
+            },
+            "kibana": {
+              "http_port": "${KibanaPort}",
+              "http_ip": "${KibanaHost}"
+            },
+            "filebeat": {
+              "enabled": "${LoggingToElasticsearchEnabled}"
+            },
+            "metricbeat": {
+              "enabled": "${MonitoringToElasticsearchEnabled}"
+            }
+          }
+      Tags:
+        - Key: Application
+          Value: GitLab
+        - Key: MaintainerName
+          Value: Marius Mitrofan
+        - Key: MaintainerTeam
+          Value: NETBEARS
+        - Key: MaintainerEmail
+          Value: support@netbears.com
+
+  Elb:
+    Type: AWS::ElasticLoadBalancing::LoadBalancer
+    DependsOn: Layer
+    Properties:
+      HealthCheck:
+        Interval: 30
+        Target: TCP:22
+        Timeout: 5
+        UnhealthyThreshold: 5
+        HealthyThreshold: 5
+      Listeners:
+        - InstancePort: 80
+          LoadBalancerPort: 80
+          Protocol: HTTP
+          InstanceProtocol: HTTP
+          PolicyNames:
+            - Fn::Sub: ${AWS::StackName}
+        - InstancePort: 80
+          LoadBalancerPort: 443
+          Protocol: HTTPS
+          InstanceProtocol: HTTP
+          PolicyNames:
+            - Fn::Sub: ${AWS::StackName}
+          SSLCertificateId:
+            Ref: SslLoadBalancer
+      Scheme:
+        Ref: LoadBalancerType
+      SecurityGroups:
+        - Ref: AlbSecurityGroup
+      Subnets:
+        Ref: SubnetIdLoadBalancer
+      ConnectionDrainingPolicy:
+        Enabled: 'true'
+        Timeout: '300'
+      LBCookieStickinessPolicy:
+        - CookieExpirationPeriod: 600
+          PolicyName:
+            Ref: AWS::StackName
+
+  Layer:
+    Type: AWS::OpsWorks::Layer
+    Properties:
+      Name: GitLab
+      Shortname: gitlab-
+      Type: custom
+      EnableAutoHealing: 'false'
+      AutoAssignElasticIps: 'false'
+      AutoAssignPublicIps: 'false'
+      StackId:
+        Ref: OpsWorksStack
+      CustomRecipes:
+        Setup:
+          - 'gitlab_stack::setup'
+      UseEbsOptimizedInstances: True
+      CustomSecurityGroupIds:
+        - Fn::GetAtt: Ec2SecurityGroup.GroupId
+
+  ElbLayer:
+    DependsOn: Elb
+    Type: AWS::OpsWorks::ElasticLoadBalancerAttachment
+    Properties: 
+      ElasticLoadBalancerName: 
+        Ref: Elb
+      LayerId: 
+        Ref: Layer
+
+  # InstanceOpsWorks: 
+  #   DependsOn: AWSDirectory
+  #   Type: AWS::OpsWorks::Instance
+  #   DependsOn: Elb
+  #   Properties: 
+  #     StackId: 
+  #       Ref: OpsWorksStack
+  #     LayerIds: 
+  #       - Ref: Layer
+  #     InstanceType:
+  #       Ref: InstanceType
+  #     RootDeviceType: ebs
+  #     SubnetId:
+  #       Fn::Select: [ 0, Ref: SubnetIdsPrivate ]
+  #     Hostname: openvpn-1
+  #     BlockDeviceMappings:
+  #       - DeviceName: ROOT_DEVICE
+  #         Ebs:
+  #           VolumeType: gp2
+  #           VolumeSize:
+  #             Ref: InstanceRootVolumeSize
+
+  Route53Record:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneId:
+        Ref: DnsZone
+      Comment: 
+        Fn::Sub: Route53-record-for-GitLab
+      RecordSets:
+      - Name:
+          Ref: DnsRecord
+        Type: A
+        AliasTarget:
+          HostedZoneId: 
+            Fn::GetAtt:
+              - Elb
+              - CanonicalHostedZoneNameID
+          DNSName: 
+            Fn::GetAtt:
+              - Elb
+              - DNSName
+
+Outputs:
+  GitLabURL:
+    Export:
+      Name:
+        Fn::Sub: "${AWS::StackName}-GitLabURL"
+    Value:
+      Fn::Sub: "https://${DnsRecord}"
+
+  OpsWorksStackId:
+    Export:
+      Name:
+        Fn::Sub: "${AWS::StackName}-OpsWorksStack"
+    Value:
+      Ref: OpsWorksStack
+
+  LayerId:
+    Export:
+      Name:
+        Fn::Sub: "${AWS::StackName}-Layer"
+    Value:
+      Ref: Layer
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: GitLab
+      Parameters:
+      - CookbookUrl
+      - Version
+      - InstanceType
+      - InstanceRootVolumeSize
+      - SslLoadBalancer
+      - AdminPassword
+      - DnsRecord
+      - DnsZone
+    - Label:
+        default: LDAP
+      Parameters:
+      - LdapBindDn
+      - LdapBindPassword
+      - LdapUsersBaseDn
+      - LdapGroupRequirement
+      - LdapGroupBase
+      - LdapAdminGroup
+    - Label:
+        default: Logging
+      Parameters:
+      - ElasticsearchHost
+      - ElasticsearchPort
+      - KibanaHost
+      - KibanaPort
+      - LoggingToElasticsearchEnabled
+      - MonitoringToElasticsearchEnabled

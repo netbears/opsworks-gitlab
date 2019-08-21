@@ -1,0 +1,64 @@
+external_url "<%= node['gitlab']['external_url'] %>"
+
+gitlab_rails['smtp_enable'] = <%= node['gitlab']['smtp_enable'] %>
+gitlab_rails['smtp_address'] = "<%= node['gitlab']['smtp_address'] %>"
+gitlab_rails['smtp_port'] = <%= node['gitlab']['smtp_port'] %>
+gitlab_rails['smtp_user_name'] = "<%= node['gitlab']['smtp_user_name'] %>"
+gitlab_rails['smtp_password'] = "<%= node['gitlab']['smtp_password'] %>"
+gitlab_rails['smtp_domain'] = "<%= node['gitlab']['smtp_domain'] %>"
+gitlab_rails['smtp_authentication'] = "<%= node['gitlab']['smtp_authentication'] %>"
+gitlab_rails['smtp_enable_starttls_auto'] = <%= node['gitlab']['smtp_enable_starttls_auto'] %>
+gitlab_rails['smtp_tls'] = <%= node['gitlab']['smtp_tls'] %>
+
+gitlab_rails['gitlab_signup_enabled'] = <%= node['gitlab']['gitlab_signup_enabled'] %>
+gitlab_rails['gitlab_email_from'] = "<%= node['gitlab']['gitlab_email_from'] %>"
+
+gitlab_rails['git_timeout'] = <%= node['gitlab']['git_timeout'] %>
+nginx['keepalive_timeout'] = <%= node['gitlab']['keepalive_timeout'] %>
+nginx['redirect_http_to_https'] = <%= node['gitlab']['redirect_http_to_https'] %>
+unicorn['worker_timeout'] = <%= node['gitlab']['worker_timeout'] %>
+
+gitlab_rails['manage_backup_path'] = <%= node['gitlab']['manage_backup_path'] %>
+gitlab_rails['backup_path'] = "<%= node['gitlab']['backup_path'] %>"
+gitlab_rails['backup_archive_permissions'] = <%= node['gitlab']['backup_archive_permissions'] %>
+gitlab_rails['backup_pg_schema'] = "<%= node['gitlab']['backup_pg_schema'] %>"
+gitlab_rails['backup_keep_time'] = <%= node['gitlab']['backup_keep_time'] %>
+gitlab_rails['backup_upload_connection'] = {
+  'provider' => "<%= node['gitlab']['backup_upload_connection']['provider'] %>",
+  'region' => "<%= node['gitlab']['backup_upload_connection']['region'] %>",
+  'use_iam_profile' => true
+}
+gitlab_rails['backup_upload_remote_directory'] = "<%= node['gitlab']['backup_upload_remote_directory'] %>"
+gitlab_rails['backup_multipart_chunk_size'] = <%= node['gitlab']['backup_multipart_chunk_size'] %>
+gitlab_rails['backup_encryption'] = "<%= node['gitlab']['backup_encryption'] %>"
+
+gitlab_rails['ldap_enabled'] = <%= node['gitlab']['ldap_enabled'] %>
+gitlab_rails['ldap_servers'] = YAML.load <<-'EOS'
+   main:
+     label: "<%= node['gitlab']['ldap_servers']['label'] %>"
+     host: "<%= node['gitlab']['ldap_servers']['host'] %>"
+     port: <%= node['gitlab']['ldap_servers']['port'] %>
+     uid: "<%= node['gitlab']['ldap_servers']['uid'] %>"
+     method: "<%= node['gitlab']['ldap_servers']['method'] %>"
+     bind_dn: "<%= node['gitlab']['ldap_servers']['bind_dn'] %>"
+     password: "<%= node['gitlab']['ldap_servers']['password'] %>"
+     active_directory: <%= node['gitlab']['ldap_servers']['active_directory'] %>
+     allow_username_or_email_login: <%= node['gitlab']['ldap_servers']['allow_username_or_email_login'] %>
+     block_auto_created_users: <%= node['gitlab']['ldap_servers']['block_auto_created_users'] %>
+     base: "<%= node['gitlab']['ldap_servers']['base'] %>"
+     user_filter: "<%= node['gitlab']['ldap_servers']['user_filter'] %>"
+     attributes:
+       username:   "<%= node['gitlab']['ldap_servers']['attributes']['username'] %>"
+       email:      "<%= node['gitlab']['ldap_servers']['attributes']['email'] %>"
+       name:       "<%= node['gitlab']['ldap_servers']['attributes']['name'] %>"
+       first_name: "<%= node['gitlab']['ldap_servers']['attributes']['givenName'] %>"
+       last_name:  "<%= node['gitlab']['ldap_servers']['attributes']['sn'] %>"
+     lowercase_usernames: <%= node['gitlab']['ldap_servers']['attributes']['lowercase_usernames'] %>
+     group_base: "<%= node['gitlab']['ldap_servers']['group_base'] %>"
+     admin_group: "<%= node['gitlab']['ldap_servers']['admin_group'] %>"
+EOS
+
+prometheus['listen_address'] = '0.0.0.0:9090'
+node_exporter['listen_address'] = '0.0.0.0:9100'
+redis_exporter['listen_address'] = '0.0.0.0:9121'
+postgres_exporter['listen_address'] = '0.0.0.0:9187'
