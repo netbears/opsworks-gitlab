@@ -32,6 +32,10 @@
     "ParameterValue": "${SslLoadBalancer}"
   },
   {
+    "ParameterKey": "VpcId",
+    "ParameterValue": "${VpcId}"
+  },
+  {
     "ParameterKey": "DnsRecord",
     "ParameterValue": "${DnsRecord}"
   },
@@ -81,10 +85,10 @@
   },
   {
     "ParameterKey": "LoggingToElasticsearchEnabled",
-    "ParameterValue": "${OpenVPNFilebeatEnabled}"
+    "ParameterValue": "${LoggingToElasticsearchEnabled}"
   },
   {
     "ParameterKey": "MonitoringToElasticsearchEnabled",
-    "ParameterValue": "${OpenVPNMetricbeatEnabled}"
+    "ParameterValue": "${MonitoringToElasticsearchEnabled}"
   }
 ]

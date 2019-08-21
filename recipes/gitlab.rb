@@ -40,3 +40,10 @@ cron 'backup_gitlab' do
   user 'root'
   command 'gitlab-rake gitlab:backup:create'
 end
+
+cron 'remove_old_backup_gitlab' do
+  hour '3'
+  minute '30'
+  user 'root'
+  command "rm -f #{node['gitlab']['backup_path']}/*"
+end

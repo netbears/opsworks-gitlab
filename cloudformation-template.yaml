@@ -22,7 +22,7 @@ Parameters:
 
   InstanceRootVolumeSize:
     Type: String
-    Default: '100'
+    Default: '200'
     Description: Size in GB of the root volume
 
   LoadBalancerType:
@@ -32,13 +32,14 @@ Parameters:
       - internal
       - internet-facing
 
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+
   SubnetIdLoadBalancer:
-    Type: String
-    Default: List<AWS::EC2::Subnet::Id>
+    Type: List<AWS::EC2::Subnet::Id>
 
   SubnetIdHost:
-    Type: String
-    Default: AWS::EC2::Subnet::Id
+    Type: AWS::EC2::Subnet::Id
 
   SslLoadBalancer:
     Type: String
@@ -196,7 +197,7 @@ Resources:
   LdapPasswordAlias:
     Type: AWS::KMS::Alias
     Properties:
-      AliasName: alias/OpenVPN
+      AliasName: alias/GitLab
       TargetKeyId:
         Ref: LdapPasswordKey
 
@@ -313,6 +314,16 @@ Resources:
           ToPort: 65535
           CidrIp: 0.0.0.0/0
 
+  SnapshotS3Bucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: True
+        BlockPublicPolicy: True
+        IgnorePublicAcls: True
+        RestrictPublicBuckets: True
+
   OpsWorksStack: 
     Type: AWS::OpsWorks::Stack
     Properties: 
@@ -347,7 +358,7 @@ Resources:
           {
             "gitlab": {
               "version": "${Version}",
-              "external_url": "${ExternalUrl}",
+              "external_url": "http://${DnsRecord}",
               "domain": "${DnsRecord}",
               "ldap_servers": {
                 "bind_dn": "${LdapBindDn}",
@@ -356,7 +367,12 @@ Resources:
                 "user_filter": "${LdapGroupRequirement}",
                 "group_base": "${LdapGroupBase}",
                 "admin_group": "${LdapAdminGroup}"
-              }
+              },
+              "backup_upload_connection": {
+                "region": "${AWS::Region}",
+                "provider": "AWS"
+              },
+              "backup_upload_remote_directory": "${SnapshotS3Bucket}"
             },
             "elasticsearch": {
               "http_port": "${ElasticsearchPort}",
@@ -400,6 +416,10 @@ Resources:
           InstanceProtocol: HTTP
           PolicyNames:
             - Fn::Sub: ${AWS::StackName}
+        - InstancePort: 22
+          LoadBalancerPort: 22
+          Protocol: TCP
+          InstanceProtocol: TCP
         - InstancePort: 80
           LoadBalancerPort: 443
           Protocol: HTTPS
@@ -528,6 +548,9 @@ Metadata:
       - AdminPassword
       - DnsRecord
       - DnsZone
+      - SubnetIdHost
+      - SubnetIdLoadBalancer
+      - VpcId
     - Label:
         default: LDAP
       Parameters:
