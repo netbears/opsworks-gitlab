@@ -9,7 +9,7 @@ version          '1.0.0'
 
 depends 'build-essential', '~> 8.0.3'
 depends 'git'
-depends 'systemd'
+depends 'systemd', '~> 3.1.1'
 depends 'poise-service', '~> 1.5.2'
 depends 'ntp', '~> 3.5.1'
 depends 'logrotate', '~> 2.2.0'
