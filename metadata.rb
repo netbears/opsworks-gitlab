@@ -14,6 +14,7 @@ depends 'poise-service', '~> 1.5.2'
 depends 'ntp', '~> 3.5.1'
 depends 'logrotate', '~> 2.2.0'
 depends 'seven_zip', '~> 2.0.2'
+depends 'windows', '~> 3.4.4'
 
 gem 'aws-sdk', '~> 2.7'
 
