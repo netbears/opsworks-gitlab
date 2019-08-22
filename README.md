@@ -59,7 +59,7 @@ If that doesn't happen or you want to speed things up, just go to the `Deploymen
 The stack automatically deploys the following logic:
 - NodeExporter: which can be connected to any running Prometheus instance
 - CloudWatch: because underlying system is OpsWorks for provisioning, you get the benefits of exporting automatically granular data to CloudWatch which can be viewed in the Monitoring section of the stack
-- Metricbeat: this is available through the Kibana UI and offers more detailed information about the running nodes (available only if `OpenVPNMetricbeatEnabled` is set to `true` in `.env`)
+- Metricbeat: this is available through the Kibana UI and offers more detailed information about the running nodes (available only if `MonitoringToElasticsearchEnabled` is set to `true` in `.env`)
 
 ## Logging
-The stack pushes all ElasticSearch logs within to filebeat and then they get sent to the pre-defined ElasticSearch stack under index `filebeat-*`  (available only if `OpenVPNFilebeatEnabled` is set to `true` in `.env`).
+The stack pushes all ElasticSearch logs within to filebeat and then they get sent to the pre-defined ElasticSearch stack under index `filebeat-*`  (available only if `LoggingToElasticsearchEnabled` is set to `true` in `.env`).
