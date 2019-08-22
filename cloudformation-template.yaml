@@ -53,6 +53,10 @@ Parameters:
     Description: Route53 hosted zone in which to place dns record
 
   #LDAP
+  LdapHostname:
+    Type: String
+    Description: Your LDAP hostname
+
   LdapBindDn:
     Type: String
     Description: User will have to be created in AD after stack creation
@@ -366,7 +370,8 @@ Resources:
                 "base": "${LdapUsersBaseDn}",
                 "user_filter": "${LdapGroupRequirement}",
                 "group_base": "${LdapGroupBase}",
-                "admin_group": "${LdapAdminGroup}"
+                "admin_group": "${LdapAdminGroup}",
+                "host": "${LdapHostname}"
               },
               "backup_upload_connection": {
                 "region": "${AWS::Region}",
@@ -560,6 +565,7 @@ Metadata:
       - LdapGroupRequirement
       - LdapGroupBase
       - LdapAdminGroup
+      - LdapHostname
     - Label:
         default: Logging
       Parameters:

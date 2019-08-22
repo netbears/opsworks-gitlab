@@ -68,6 +68,10 @@
     "ParameterValue": "${LdapAdminGroup}"
   },
   {
+    "ParameterKey": "LdapHostname",
+    "ParameterValue": "${LdapHostname}"
+  },
+  {
     "ParameterKey": "ElasticsearchPort",
     "ParameterValue": "${ElasticsearchPort}"
   },
