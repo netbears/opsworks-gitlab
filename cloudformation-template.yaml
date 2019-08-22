@@ -550,6 +550,7 @@ Metadata:
       - SubnetIdHost
       - SubnetIdLoadBalancer
       - VpcId
+      - LoadBalancerType
     - Label:
         default: LDAP
       Parameters:

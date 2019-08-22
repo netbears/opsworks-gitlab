@@ -6,7 +6,6 @@ execute 'apt-get update'
   package pkg
 end
 
-include_recipe 'gitlab_stack::swap'
 include_recipe 'gitlab_stack::gitlab'
 include_recipe 'gitlab_stack::logrotate'
 include_recipe 'gitlab_stack::filebeat' if node['filebeat']['enabled'] == 'true'
