@@ -41,6 +41,20 @@ cron 'backup_gitlab' do
   command 'gitlab-rake gitlab:backup:create'
 end
 
+cron 'archive_gitlab_secrets' do
+  hour '0'
+  minute '30'
+  user 'root'
+  command 'tar -cf /mnt/backup/$(date "+etc-gitlab-%s.tar") -C / etc/gitlab'
+end
+
+cron 'backup_gitlab_secrets' do
+  hour '0'
+  minute '45'
+  user 'root'
+  command "aws s3 cp /mnt/backup/$(date '+etc-gitlab-%s.tar') s3://#{node['gitlab']['backup_upload_remote_directory']}"
+end
+
 cron 'remove_old_backup_gitlab' do
   hour '3'
   minute '30'
