@@ -113,6 +113,52 @@ Parameters:
       - 'false'
     Description: Whether to deploy Metricbeat and connect it to ElasticSearch
 
+  # SMTP settings
+  SmtpEnable:
+    Type: String
+    Default: 'false'
+    AllowedValues:
+      - 'true'
+      - 'false'
+    Description: All other SMTP settings are ignored if this is set to "false"
+
+  SmtpAddress:
+    Type: String
+
+  SmtpPort:
+    Type: String
+    Default: '587'
+
+  SmtpUsername:
+    Type: String
+
+  SmtpPassword:
+    Type: String
+    NoEcho: 'true'
+    Default: 'some-password'
+
+  SmtpDomain:
+    Type: String
+    Default: 'netbears.com'
+
+  SmtpEnableStartTlsAuto:
+    Type: String
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+
+  SmtpTls:
+    Type: String
+    Default: 'true'
+    AllowedValues:
+      - 'true'
+      - 'false'
+
+  SmtpEmailFrom:
+    Type: String
+    Default: gitlab@netbears.com
+
 Resources:
   KmsEncryptRole:
     Type: AWS::IAM::Role
@@ -172,6 +218,34 @@ Resources:
     Properties:
       ServiceToken:
         Fn::GetAtt: KmsEncryptFunction.Arn
+
+  KmsEncryptFunctionSmtp:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.lambda_handler
+      Runtime: python3.7
+      Role:
+        Fn::GetAtt: KmsEncryptRole.Arn
+      Code:
+        ZipFile:
+          Fn::Sub: |
+            import boto3
+            import cfnresponse
+            import base64
+            def lambda_handler(event, context):
+              responseValue={}
+              kms = boto3.client('kms',region_name="${AWS::Region}")
+              secret = kms.encrypt(KeyId="${LdapPasswordKey.Arn}",Plaintext="${SmtpPassword}")
+              blob = secret["CiphertextBlob"]
+              responseValue["Value"] = str(base64.b64encode(blob))[2:-1]
+              cfnresponse.send(event, context, cfnresponse.SUCCESS, responseValue)
+              return True
+
+  KmsEncryptResultSmtp:
+    Type: Custom::KmsEncryptSmtpPassword
+    Properties:
+      ServiceToken:
+        Fn::GetAtt: KmsEncryptFunctionSmtp.Arn
 
   LdapPasswordKey:
     Type: AWS::KMS::Key
@@ -362,7 +436,7 @@ Resources:
           {
             "gitlab": {
               "version": "${Version}",
-              "external_url": "http://${DnsRecord}",
+              "external_url": "https://${DnsRecord}",
               "domain": "${DnsRecord}",
               "ldap_servers": {
                 "bind_dn": "${LdapBindDn}",
@@ -377,7 +451,17 @@ Resources:
                 "region": "${AWS::Region}",
                 "provider": "AWS"
               },
-              "backup_upload_remote_directory": "${SnapshotS3Bucket}"
+              "backup_upload_remote_directory": "${SnapshotS3Bucket}",
+
+              "smtp_enable": "${SmtpEnable}",
+              "smtp_address": "${SmtpAddress}",
+              "smtp_port": "${SmtpPort}",
+              "smtp_user_name": "${SmtpUsername}",
+              "smtp_password_encrypted": "${KmsEncryptResultSmtp.Value}",
+              "smtp_domain": "${SmtpDomain}",
+              "smtp_enable_starttls_auto": "${SmtpEnableStartTlsAuto}",
+              "smtp_tls": "${SmtpTls}",
+              "gitlab_email_from": "${SmtpEmailFrom}"
             },
             "elasticsearch": {
               "http_port": "${ElasticsearchPort}",
@@ -575,3 +659,15 @@ Metadata:
       - KibanaPort
       - LoggingToElasticsearchEnabled
       - MonitoringToElasticsearchEnabled
+    - Label:
+        default: SMTP
+      Parameters:
+        - SmtpEnable
+        - SmtpAddress
+        - SmtpPort
+        - SmtpUsername
+        - SmtpPassword
+        - SmtpDomain
+        - SmtpEnableStartTlsAuto
+        - SmtpTls
+        - SmtpEmailFrom

@@ -94,5 +94,37 @@
   {
     "ParameterKey": "MonitoringToElasticsearchEnabled",
     "ParameterValue": "${MonitoringToElasticsearchEnabled}"
+  },
+  {
+    "ParameterKey": "SmtpEnable",
+    "ParameterValue": "${SmtpEnable}"
+  },
+  {
+    "ParameterKey": "SmtpAddress",
+    "ParameterValue": "${SmtpAddress}"
+  },
+  {
+    "ParameterKey": "SmtpPort",
+    "ParameterValue": "${SmtpPort}"
+  },
+  {
+    "ParameterKey": "SmtpUsername",
+    "ParameterValue": "${SmtpUsername}"
+  },
+  {
+    "ParameterKey": "SmtpPassword",
+    "ParameterValue": "${SmtpPassword}"
+  },
+  {
+    "ParameterKey": "SmtpDomain",
+    "ParameterValue": "${SmtpDomain}"
+  },
+  {
+    "ParameterKey": "SmtpEnableStartTlsAuto",
+    "ParameterValue": "${SmtpEnableStartTlsAuto}"
+  },
+  {
+    "ParameterKey": "SmtpTls",
+    "ParameterValue": "${SmtpTls}"
   }
 ]

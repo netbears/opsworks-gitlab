@@ -27,10 +27,11 @@ template "#{node['gitlab']['install_path']}/gitlab.rb" do
   owner 'root'
   group 'root'
   mode  '0600'
+  variables(
+    elb_https: (node['gitlab']['redirect_http_to_https']).to_s
+  )
   action :create
 end
-
-execute "echo \"127.0.0.1 #{node['gitlab']['domain']}\" >> /etc/hosts"
 
 execute 'gitlab-ctl reconfigure'
 

@@ -12,11 +12,25 @@ gitlab_rails['smtp_tls'] = <%= node['gitlab']['smtp_tls'] %>
 
 gitlab_rails['gitlab_signup_enabled'] = <%= node['gitlab']['gitlab_signup_enabled'] %>
 gitlab_rails['gitlab_email_from'] = "<%= node['gitlab']['gitlab_email_from'] %>"
-
 gitlab_rails['git_timeout'] = <%= node['gitlab']['git_timeout'] %>
+
+
+nginx['listen_port'] = 80
 nginx['keepalive_timeout'] = <%= node['gitlab']['keepalive_timeout'] %>
 nginx['redirect_http_to_https'] = <%= node['gitlab']['redirect_http_to_https'] %>
+registry_nginx['redirect_http_to_https'] = <%= node['gitlab']['redirect_http_to_https'] %>
+mattermost_nginx['redirect_http_to_https'] = <%= node['gitlab']['redirect_http_to_https'] %>
 unicorn['worker_timeout'] = <%= node['gitlab']['worker_timeout'] %>
+<% if @elb_https == "true" -%>
+nginx['listen_https'] = false
+nginx['hsts_max_age'] = 31536000
+nginx['hsts_include_subdomains'] = false
+nginx['listen_https'] = false
+nginx['proxy_set_headers'] = {
+  "X-Forwarded-Proto" => "https",
+  "X-Forwarded-Ssl" => "on"
+}
+<% end -%>
 
 gitlab_rails['manage_backup_path'] = <%= node['gitlab']['manage_backup_path'] %>
 gitlab_rails['backup_path'] = "<%= node['gitlab']['backup_path'] %>"

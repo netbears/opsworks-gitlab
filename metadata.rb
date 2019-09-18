@@ -5,7 +5,7 @@ maintainer       'NETBEARS'
 license          'All rights reserved'
 description      'Installs/Configures gitlab_stack'
 long_description 'Installs/Configures gitlab_stack'
-version          '1.0.0'
+version          '1.1.0'
 
 depends 'build-essential', '~> 8.0.3'
 depends 'git', '~> 8.0.1'

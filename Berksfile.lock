@@ -11,7 +11,7 @@ GRAPH
   git (8.0.1)
     build-essential (>= 0.0.0)
     homebrew (>= 0.0.0)
-  gitlab_stack (1.0.0)
+  gitlab_stack (1.1.0)
     build-essential (~> 8.0.3)
     git (~> 8.0.1)
     logrotate (~> 2.2.0)
