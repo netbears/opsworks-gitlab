@@ -9,6 +9,6 @@ default['base_packages'] = %w[
   apt-transport-https
   awscli
 ]
-default['custom_packages']            = []
+default['custom_packages'] = []
 
 default['application'] = 'gitlab'
