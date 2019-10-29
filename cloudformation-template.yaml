@@ -219,47 +219,33 @@ Resources:
             def lambda_handler(event, context):
               responseValue={}
               kms = boto3.client('kms',region_name="${AWS::Region}")
-              secret = kms.encrypt(KeyId="${LdapPasswordKey.Arn}",Plaintext="${LdapBindPassword}")
+              secret = kms.encrypt(KeyId=event['ResourceProperties']['GitLabPasswordKeyArn'],Plaintext=event['ResourceProperties']['TextToEncrypt'])
               blob = secret["CiphertextBlob"]
               responseValue["Value"] = str(base64.b64encode(blob))[2:-1]
               cfnresponse.send(event, context, cfnresponse.SUCCESS, responseValue)
               return True
 
-  KmsEncryptResult:
+  KmsEncryptResultLdap:
     Type: Custom::KmsEncryptLdapBindPassword
     Properties:
       ServiceToken:
         Fn::GetAtt: KmsEncryptFunction.Arn
-
-  KmsEncryptFunctionSmtp:
-    Type: AWS::Lambda::Function
-    Properties:
-      Handler: index.lambda_handler
-      Runtime: python3.7
-      Role:
-        Fn::GetAtt: KmsEncryptRole.Arn
-      Code:
-        ZipFile:
-          Fn::Sub: |
-            import boto3
-            import cfnresponse
-            import base64
-            def lambda_handler(event, context):
-              responseValue={}
-              kms = boto3.client('kms',region_name="${AWS::Region}")
-              secret = kms.encrypt(KeyId="${LdapPasswordKey.Arn}",Plaintext="${SmtpPassword}")
-              blob = secret["CiphertextBlob"]
-              responseValue["Value"] = str(base64.b64encode(blob))[2:-1]
-              cfnresponse.send(event, context, cfnresponse.SUCCESS, responseValue)
-              return True
+      TextToEncrypt:
+        Ref: LdapBindPassword
+      GitLabPasswordKeyArn:
+        Fn::GetAtt: GitLabPasswordKey.Arn
 
   KmsEncryptResultSmtp:
-    Type: Custom::KmsEncryptSmtpPassword
+    Type: Custom::KmsEncryptSmtpBindPassword
     Properties:
       ServiceToken:
-        Fn::GetAtt: KmsEncryptFunctionSmtp.Arn
+        Fn::GetAtt: KmsEncryptFunction.Arn
+      TextToEncrypt:
+        Ref: SmtpPassword
+      GitLabPasswordKeyArn:
+        Fn::GetAtt: GitLabPasswordKey.Arn
 
-  LdapPasswordKey:
+  GitLabPasswordKey:
     Type: AWS::KMS::Key
     Properties:
       KeyPolicy:
@@ -284,12 +270,12 @@ Resources:
               AWS:
                 - Fn::GetAtt: InstanceRoleGitLab.Arn
 
-  LdapPasswordAlias:
+  GitLabPasswordAlias:
     Type: AWS::KMS::Alias
     Properties:
       AliasName: alias/GitLab
       TargetKeyId:
-        Ref: LdapPasswordKey
+        Ref: GitLabPasswordKey
 
   ServiceRole:
     Type: AWS::IAM::Role
@@ -452,7 +438,7 @@ Resources:
               "domain": "${DnsRecord}",
               "ldap_servers": {
                 "bind_dn": "${LdapBindDn}",
-                "password_encrypted": "${KmsEncryptResult.Value}",
+                "password_encrypted": "${KmsEncryptResultLdap.Value}",
                 "base": "${LdapUsersBaseDn}",
                 "user_filter": "${LdapGroupRequirement}",
                 "group_base": "${LdapGroupBase}",
