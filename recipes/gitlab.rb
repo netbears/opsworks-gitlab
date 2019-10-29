@@ -46,14 +46,14 @@ cron 'archive_gitlab_secrets' do
   hour '0'
   minute '30'
   user 'root'
-  command "tar -cf /mnt/backup/$(date '+etc-gitlab-%F.tar') -C / etc/gitlab"
+  command "tar -cf #{node['gitlab']['backup_path']}/$(date '+etc-gitlab-%F.tar') -C #{node['gitlab']['install_path']}"
 end
 
 cron 'backup_gitlab_secrets' do
   hour '0'
   minute '45'
   user 'root'
-  command "aws s3 cp /mnt/backup/$(date '+etc-gitlab-%F.tar') s3://#{node['gitlab']['backup_upload_remote_directory']}"
+  command "aws s3 cp #{node['gitlab']['backup_path']}/$(date '+etc-gitlab-%F.tar') s3://#{node['gitlab']['backup_upload_remote_directory']}"
 end
 
 cron 'remove_old_backup_gitlab' do
